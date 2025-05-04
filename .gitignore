@@ -5,3 +5,4 @@
 src/chimera/version.hpp
 mingw32/
 build/
+dist/
