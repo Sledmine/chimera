@@ -1,0 +1,15 @@
+version: 1
+commands:
+  package:
+    - rm -rf package/
+    - mkdir -p dist/
+    - mkdir -p package/game-root
+    - cp -r fonts package/game-root/
+    - cp chimera.ini package/game-root/
+    - rm -f package/game-root/fonts/*.md
+    - cp build/strings.dll package/game-root/
+    - cp manifest.json package/
+    - mercury pack package/ dist/
+    - rm -rf package/
+  release:
+    - mercury build package
