@@ -1,0 +1,10 @@
+{
+    "description": "Chimera is the update for Halo: Combat Evolved/Custom Edition on PC that we should have had but never got.",
+    "name": "Chimera",
+    "version": "1.0.0-r1042",
+    "author": "Snowy",
+    "category": "addon",
+    "label": "chimera",
+    "files": [],
+    "manifestVersion": "1.1.0"
+}
