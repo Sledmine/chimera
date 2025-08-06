@@ -41,7 +41,8 @@ namespace Chimera {
 
     static LPD3DXFONT get_override_font(GenericFont font) {
         // Do NOT use these if widescreen fix is disabled unless we're 4:3
-        if(!widescreen_fix_enabled()) {
+        auto *ringworld = GetModuleHandle("ringworld.dll");
+        if(!widescreen_fix_enabled() && !ringworld) {
             auto resolution = get_resolution();
             if(resolution.width / 4 * 3 != resolution.height) {
                 return nullptr;
@@ -413,22 +414,40 @@ namespace Chimera {
 
             auto *override_font = text.override;
 
+            // Calculate the width of a space for the given override font.
+            RECT temp_rect_1;
+            RECT temp_rect_2;
+            override_font->DrawText(NULL," _", -1, &temp_rect_1, DT_CALCRECT, 0xFFFFFFFF);
+            override_font->DrawText(NULL,"_", -1, &temp_rect_2, DT_CALCRECT, 0xFFFFFFFF);
+            //Small fudge factor because override fonts have different widths compared to the games.
+            auto space_width = (temp_rect_1.right - temp_rect_1.left) - (temp_rect_2.right - temp_rect_2.left) + (0.25 * scale);
+
             if(u8) {
-                if(draw_shadow) {
-                    override_font->DrawText(NULL, u8->data(), -1, &rshadow, align, color_shadow);
-                }
-                override_font->DrawText(NULL, u8->data(), -1, &rect, align, color);
-            }
-            else {
-                // Some cheap and nasty hackery to stop DrawText stripping the spaces of the end of chapter titles.
-                // Not perfect but better than nothing.
-                if(u16->back() == static_cast<wchar_t>(' ')) {
-                    if(draw_shadow) {
-                        override_font->DrawTextW(NULL, u16->data(), u16->length()+1, &rshadow, align, color_shadow);
+                if(!u8->empty()) {
+                    if(align == DT_RIGHT && u8->back() == static_cast<char>(' ')) {
+                        // Add the trailing spaces as an offset to the rect struct.
+                        auto num_spaces = u8->find_last_not_of(static_cast<char>(' '));
+                        rect.right = rect.right - (u8->length() - num_spaces) * space_width;
+                        rect.left = rect.left - (u8->length() - num_spaces) * space_width;
+                        rshadow.right = rshadow.right - (u8->length() - num_spaces) * space_width;
+                        rshadow.left = rshadow.left - (u8->length() - num_spaces) * space_width;
                     }
-                    override_font->DrawTextW(NULL, u16->data(), u16->length()+1, &rect, align, color);
+                    if(draw_shadow) {
+                        override_font->DrawText(NULL, u8->data(), -1, &rshadow, align, color_shadow);
+                    }
+                    override_font->DrawText(NULL, u8->data(), -1, &rect, align, color);
                 }
-                else {
+            }
+            else if(u16) {
+                if(!u16->empty()) {
+                    if(align == DT_RIGHT && u16->back() == static_cast<wchar_t>(' ')) {
+                        // Add the trailing spaces as an offset to the rect struct.
+                        auto num_spaces = u16->find_last_not_of(static_cast<wchar_t>(' '));
+                        rect.right = rect.right - (u16->length() - num_spaces) * space_width;
+                        rect.left = rect.left - (u16->length() - num_spaces) * space_width;
+                        rshadow.right = rshadow.right - (u16->length() - num_spaces) * space_width;
+                        rshadow.left = rshadow.left - (u16->length() - num_spaces) * space_width;
+                    }
                     if(draw_shadow) {
                         override_font->DrawTextW(NULL, u16->data(), -1, &rshadow, align, color_shadow);
                     }
@@ -472,6 +491,28 @@ namespace Chimera {
         text_list.clear();
     }
 
+    static LPD3DXFONT get_d3dx9_resource_for_vector_font(VectorFont *vector_font) {
+        LPD3DXFONT d3dx9_font = NULL;
+        switch(font_data->style) {
+            case 1:
+                d3dx9_font = reinterpret_cast<LPD3DXFONT>(vector_font->bold.hardware_format);
+                break;
+            case 2:
+                d3dx9_font = reinterpret_cast<LPD3DXFONT>(vector_font->italic.hardware_format);
+                break;
+            case 3:
+                d3dx9_font = reinterpret_cast<LPD3DXFONT>(vector_font->condensed.hardware_format);
+                break;
+            case 4:
+                d3dx9_font = reinterpret_cast<LPD3DXFONT>(vector_font->underline.hardware_format);
+                break;
+            default:
+                d3dx9_font = reinterpret_cast<LPD3DXFONT>(vector_font->regular.hardware_format);
+                break;
+        }
+        return d3dx9_font;
+    }
+
     std::int16_t font_pixel_height(const std::variant<TagID, GenericFont> &font) noexcept {
         // Find the font
         TagID font_tag = get_generic_font_if_generic(font);
@@ -485,8 +526,20 @@ namespace Chimera {
         }
 
         auto *tag = get_tag(font_tag);
-        auto *tag_data = tag->data;
-        return *reinterpret_cast<std::uint16_t *>(tag_data + 0x4) + *reinterpret_cast<std::uint16_t *>(tag_data + 0x6);
+        std::int16_t height = 0;
+        if(tag->primary_class == TAG_CLASS_VECTOR_FONT) {
+            VectorFont *tag_data = reinterpret_cast<VectorFont *>(tag->data);
+            LPD3DXFONT d3dx9_font = get_d3dx9_resource_for_vector_font(tag_data);
+            height = tag_data->font_size;
+            if(!d3dx9_font) { 
+                return 0; // return 0 if the font is not loaded yet to avoid render the text in the wrong place
+            }
+        }
+        else {
+            auto *tag_data = tag->data;
+            height = *reinterpret_cast<std::uint16_t *>(tag_data + 0x4) + *reinterpret_cast<std::uint16_t *>(tag_data + 0x6);
+        }
+        return height;
     }
 
     template <typename C> static void get_dimensions_template(std::int32_t &width, std::int32_t &height, const C *text) {
@@ -496,6 +549,7 @@ namespace Chimera {
     template<typename T> std::int16_t text_pixel_length_t(const T *text, const std::variant<TagID, GenericFont> &font) {
         // Find the font
         TagID font_tag = get_generic_font_if_generic(font);
+        auto *tag = get_tag(font_tag);
         LPD3DXFONT override_font = get_override_font(font);
 
         // Do the buffer thing
@@ -511,6 +565,15 @@ namespace Chimera {
             }
         }
         buffer[buffer_length] = 0;
+
+        if(tag->primary_class == TAG_CLASS_VECTOR_FONT) {
+            VectorFont *vector_font = reinterpret_cast<VectorFont *>(tag->data);
+            LPD3DXFONT d3dx9_font = get_d3dx9_resource_for_vector_font(vector_font);
+            override_font = d3dx9_font;
+            if(!d3dx9_font) { 
+                return 0; // the font is not loaded yet
+            }
+        }
 
         if(override_font) {
             RECT rect;
@@ -544,9 +607,6 @@ namespace Chimera {
             char i_stopped_caring[16];
         };
         static_assert(sizeof(Character) == 0x14);
-
-        // Get the tag
-        auto *tag = get_tag(font_tag);
 
         // If it's not loaded, don't care
         if(tag->indexed && reinterpret_cast<std::uintptr_t>(tag->data) < 65536) {

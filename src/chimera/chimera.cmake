@@ -80,6 +80,8 @@ add_library(chimera STATIC
     src/chimera/fix/abolish_safe_mode.cpp
     src/chimera/fix/aim_assist.cpp
     src/chimera/fix/aim_assist.S
+    src/chimera/fix/af.cpp
+    src/chimera/fix/af.S
     src/chimera/fix/auto_center.cpp
     src/chimera/fix/blue_32bit_color_fix.cpp
     src/chimera/fix/bullshit_server_data.cpp
@@ -93,6 +95,8 @@ add_library(chimera STATIC
     src/chimera/fix/contrail_fix.S
     src/chimera/fix/custom_map_lobby_fix.cpp
     src/chimera/fix/death_reset_time.cpp
+    src/chimera/fix/z_fighting.cpp
+    src/chimera/fix/z_fighting.S
     src/chimera/fix/descope_fix.cpp
     src/chimera/fix/extend_limits.cpp
     src/chimera/fix/extend_limits.S
@@ -122,6 +126,8 @@ add_library(chimera STATIC
     src/chimera/fix/model_detail.S
     src/chimera/fix/motion_sensor_fix.cpp
     src/chimera/fix/motion_sensor_fix.S
+    src/chimera/fix/multitexture_overlay_fix.cpp
+    src/chimera/fix/multitexture_overlay_fix.S
     src/chimera/fix/name_fade.cpp
     src/chimera/fix/name_fade.S
     src/chimera/fix/nav_numbers.cpp
@@ -155,6 +161,7 @@ add_library(chimera STATIC
     src/chimera/halo_data/chat.S
     src/chimera/halo_data/contrail.cpp
     src/chimera/halo_data/controls.cpp
+    src/chimera/halo_data/cutscene.cpp
     src/chimera/halo_data/damage.cpp
     src/chimera/halo_data/damage.S
     src/chimera/halo_data/decal.cpp

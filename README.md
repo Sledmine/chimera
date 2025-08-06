@@ -44,7 +44,7 @@ Uninstalling Chimera is simple:
 You can install binary mods (i.e. dlls) by creating a folder called "mods" and
 copying the dlls into the directory.
 
-> **NOTE**: Chimera does *not* support dll mods including HAC2 or Open Sauce.
+> **NOTE**: Chimera does *not* support some dll mods such as HAC2 or Open Sauce.
 > This is because they modify the game in similar ways, resulting in them
 > conflicting with one another. Supporting just one of these mods would mean
 > extra development time that we don't have. Sorry.
@@ -81,6 +81,7 @@ These are features that are always on.
 - [Model LOD fix](#model-lod-fix)
 - [FOV fix](#fov-fix)
 - [Sun fix](#sun-fix)
+- [Zoom blur fix](#zoom-blur-fix)
 - [Custom chat](#custom-chat)
 - [NVIDIA camo fix](#nvidia-camo-fix)
 - [Contrail fix](#contrail-fix)
@@ -195,6 +196,11 @@ what `chimera_fov` is for.
 #### Sun fix
 Lens flares are drawn at a set number of pixels regardless of vertical
 resolution. Chimera makes it scale by 768p, instead.
+
+#### Zoom blur fix
+The zoom blur radius is a set number of pixels regardless of vertical resolution.
+Chimera makes it scale by 480p, instead. Chimera also increases the resolution of
+the zoom blur effect, improving the quality.
 
 #### Custom chat
 The Keystone chat is crashy and broken. Chimera adds a replacement chat.
@@ -415,6 +421,7 @@ the chimera folder created by Chimera.
 - [Block hold F1](#block-hold-f1)
 - [Block letterbox](#block-letterbox)
 - [Block loading screen](#block-loading-screen)
+- [Block multitexture overlays](#block-multitexture-overlays)
 - [Block mouse acceleration](#block-mouse-acceleration)
 - [Block server IP](#block-server-ip)
 - [Block zoom blur](#block-zoom-blur)
@@ -474,8 +481,8 @@ equivalent mod), or else desyncing will occur.
 
 #### Anisotropic filtering
 This enables the same thing that is done in config.txt but without having to
-edit it. Note that this only applies to the level geometry, not individual
-objects. You'd need AF enabled externally to do that.
+edit it. Chimera also applies anisotropic filtering to individual objects
+instead of just level geometry.
 
 **Usage:** `chimera_af [true/false]`
 
@@ -559,6 +566,13 @@ loading screen.
 
 **Usage:** `chimera_block_loading_screen [true/false]`
 
+#### Block multitexture overlays
+Multitexture overlays are used for the animated sniper scope ticks.
+Given that most sniper scope tags are broken and misaligned, Chimera provides
+a way to disable them.
+
+**Usage:** `chimera_block_multitexture_overlays [true/false]`
+
 #### Block mouse acceleration
 Halo uses raw input, thus it bypasses the mouse acceleration setting of your
 operating system (unless you run the game in Wine). However, Halo adds its own
@@ -574,8 +588,9 @@ this feature if you want.
 **Usage:** `chimera_block_server_ip [true/false]`
 
 #### Block zoom blur
-Halo's zoom blur looks like ass on high resolutions. This feature removes it
-without requiring you to use DisableAlphaRenderTargets or safe mode.
+By default, Halo's zoom blur looks like ass on high resolutions. Chimera fixes this
+but this feature removes the blur effect if you want without requiring you to use
+DisableAlphaRenderTargets or safe mode.
 
 **Usage:** `chimera_block_zoom_blur [true/false]`
 
@@ -1019,35 +1034,26 @@ Halo Custom Edition server, then you should forge the CRC32.
 To compile Chimera we use the 32-bit MinGW-w64 toolchain.
 
 > **NOTE:** Versions of GCC 11.5.0/12.X and above produce builds of chimera that crash when a large amount of maps are installed.
-Until it is known why, the recommended way to build Chimera is on Windows with the supplied toolchain links.
+Until it is known why, the recommended way to build Chimera is on Windows with the supplied toolchain link.
 
 ### Windows
-The most simple way to compile Chimera on windows is using the standalone MinGW toolchain provided by [Winlibs](https://winlibs.com).
-A current version of [Python](https://www.python.org/downloads/windows/) is also required to be installed before following these steps.
+The most simple way to compile Chimera on windows is using our provided standalone MinGW toolchain based on one provided by [Winlibs](https://winlibs.com).
 
-1. Ensure Chimera's source code is located in a short path with no spaces to prevent issues with the toolchain. e.g. `C:\source\chimera`
-2. Download the 32-bit GCC 11.4.0 MinGW-w64 MSVCRT release from [here (direct link)](https://github.com/SnowyMouse/chimera/releases/download/toolchain/winlibs-i686-posix-dwarf-gcc-11.4.0-mingw-w64msvcrt-11.0.0-r1.7z)
-3. Extract and copy the `mingw32` directory to where Chimera's source is located.
-4. Create an empty `build` directory where Chimera's source is located.
-5. Create a file called `mingw-console.bat` where Chimera's source is located with the following contents:
+1. Ensure Chimera's source code is located in a short path with no spaces to prevent issues with the toolchain. e.g. `D:\source\chimera`
+2. Download Chimera's 32-bit GCC 11.4.0 MinGW-w64 release from [here (direct link)](https://github.com/SnowyMouse/chimera/releases/download/toolchain-v2/winlibs-chimera-i686-posix-dwarf-gcc-11.4.0-mingw-w64msvcrt-11.0.0-r3.7z)
+3. Extract the contents of the archive: `mingw32`, `build`, and `mingw-console.bat` to where Chimera's source is located.[^1]
+4. Run `mingw-console.bat`. A console window should open with the correct paths configured to build Chimera. To create a Release build, Run the following commands in the MinGW console window.
 ```
-@echo off
-set PATH=%~dp0mingw32\bin;%PATH%
-cd build
-cmd /k
-```
-6. Run `mingw-console.bat`. A console window should open with the correct paths configured to build Chimera. To create a Release build, Run the following commands in the MinGW console window.
-```
-cmake.exe .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-ninja.exe
-strip.exe strings.dll
+cmake .. -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+ninja
+strip strings.dll
 ```
 For the correct DLL version information to be set [Git for Windows](https://gitforwindows.org/) must be installed, but this is not required to compile Chimera.
 
+[^1]: It does not strictly have to be extracted to the same directory as Chimera's source. if you put it somewhere else, replace `..` in the cmake command with the path to Chimera's source code.
+
 #### Windows XP
-Compiling Chimera with Windows XP support is mostly the same as normal, however a patched version of winpthread is needed when using the above toolchain.
-1. Download the winpthread patch [here (direct link)](https://github.com/SnowyMouse/chimera/releases/download/toolchain/winlibs-i686-posix-dwarf-gcc-11.4.0-mingw-w64msvcrt-11.0.0-winpthread-w9x-patch.7z) and overwrite the files in `mingw32` with those provided by the patch.
-2. When running CMake, pass the argument `-DCHIMERA_WINXP=ON` to enable Windows XP support.
+When running CMake, also pass the argument `-DCHIMERA_WINXP=ON` to enable Windows XP support.
 
 ### Linux
 Chimera can be cross-compiled from a Linux host.
